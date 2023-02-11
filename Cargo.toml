@@ -14,15 +14,11 @@ description = """Simple k-means clustering to find dominant colors in images.
 Backed by a generic k-means implementation offered as a standalone library."""
 
 [features]
-# Use default-features=false if using as a library
-default = ["app"]
+default = ["lib"]
 
-# Features required for building the binary
-app = [
-        "image",
-        "palette_color",
-        "structopt",
-    ]
+lib = [
+    "palette_color",
+]
 
 # Enable `palette` color types
 palette_color = ["palette"]
@@ -45,15 +41,6 @@ optional = true
 [dependencies.rand]
 version = "0.8.5"
 features = ["std", "small_rng"]
-
-[dependencies.rand_chacha]
-version = "0.3.1"
-default-features = false
-
-[dependencies.structopt]
-version = "0.3.26"
-default-features = false
-optional = true
 
 [profile.release]
 strip = true
