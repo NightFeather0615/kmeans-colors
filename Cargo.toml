@@ -44,6 +44,9 @@ features = ["std", "small_rng"]
 
 [profile.release]
 strip = true
+lto = true
+codegen-units = 1
+opt-level = 3
 
 [package.metadata.docs.rs]
 no-default-features = true
