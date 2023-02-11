@@ -41,7 +41,7 @@ optional = true
 
 [dependencies.rand]
 version = "0.8.5"
-features = ["std"]
+features = ["std", "small_rng"]
 
 [dependencies.rand_chacha]
 version = "0.3.1"

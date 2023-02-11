@@ -1,4 +1,4 @@
-use rand::{Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::SmallRng, thread_rng};
 
 /// A trait for enabling k-means calculation of a data type.
 pub trait Calculate: Sized {
@@ -67,10 +67,9 @@ pub fn get_kmeans<C: Calculate + Clone>(
     converge: f32,
     verbose: bool,
     buf: &[C],
-    seed: u64,
 ) -> Kmeans<C> {
     // Initialize the random centroids
-    let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(seed);
+    let mut rng = SmallRng::from_rng(thread_rng()).unwrap();
     let mut centroids: Vec<C> = Vec::with_capacity(k);
     crate::plus_plus::init_plus_plus(k, &mut rng, buf, &mut centroids);
 
@@ -222,10 +221,9 @@ pub fn get_kmeans_hamerly<C: Hamerly + Clone>(
     converge: f32,
     verbose: bool,
     buf: &[C],
-    seed: u64,
 ) -> Kmeans<C> {
     // Initialize the random centroids
-    let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(seed);
+    let mut rng = SmallRng::from_rng(thread_rng()).unwrap();
     let mut centers: HamerlyCentroids<C> = HamerlyCentroids::new(k);
     crate::plus_plus::init_plus_plus(k, &mut rng, buf, &mut centers.centroids);
 
