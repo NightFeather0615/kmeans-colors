@@ -1,6 +1,6 @@
 #[cfg(feature = "palette_color")]
 use palette::{Lab, Srgb};
-use rand::{Rng};
+use rand::Rng;
 
 use crate::kmeans::{Calculate, Hamerly, HamerlyCentroids, HamerlyPoint};
 

@@ -3,6 +3,46 @@
 [![Crates.io](https://img.shields.io/crates/v/kmeans-colors.svg)](https://crates.io/crates/kmeans-colors)
 [![Docs.rs](https://docs.rs/kmeans_colors/badge.svg)](https://docs.rs/kmeans_colors)
 
+This fork allows you to use `[f32; 3]`(`[r, g, b]`) instead of Srgb or Lab.
+
+Example with `rayon`, `rand` and `image`:
+```rust
+use image::{io, DynamicImage};
+use rayon::prelude::*;
+use kmeans_colors::get_kmeans_hamerly;
+use rand::Rng;
+
+async fn main() {
+  let img: DynamicImage = io::Reader::open(
+    "path",
+  )?.decode()?;
+  
+  let k = 1;
+  let max_iter = 10;
+  let converge = 1.0;
+  let z: Vec<[f32; 3]> = img
+    .as_bytes()
+    .par_chunks_exact(3)
+    .map(
+      |f| [f[0] as f32, f[1] as f32, f[2] as f32]
+    )
+    .collect::<Vec<[f32; 3]>>();
+  let mut rng = rand::thread_rng();
+
+  let run_result = get_kmeans_hamerly(
+      k,
+      max_iter,
+      converge,
+      false,
+      &z,
+      rng.gen::<u64>(),
+  );
+  println!("{:#?}", run_result.centroids[0]);
+
+  Ok(())
+}
+```
+
 Calculate the `k` average colors in an image using k-means clustering with
 k-means++ initialization.
 
