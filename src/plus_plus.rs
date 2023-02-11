@@ -1,5 +1,6 @@
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::Rng;
+use rayon::prelude::*;
 
 /// k-means++ centroid initialization.
 ///
@@ -20,29 +21,29 @@ pub fn init_plus_plus<C: crate::Calculate + Clone>(
     if k == 0 {
         return;
     }
-    let len = buf.len();
-    assert!(len > 0);
+    let buf_len: usize = buf.len();
+    assert!(buf_len > 0);
 
-    let mut weights: Vec<f32> = (0..len).map(|_| 0.0).collect();
+    let mut weights: Vec<f32> = (0..buf_len).into_par_iter().map(|_| 0.0).collect();
 
     // Choose first centroid at random, uniform sampling from input buffer
-    centroids.push(buf.get(rng.gen_range(0..len)).unwrap().to_owned());
+    centroids.push(buf.get(rng.gen_range(0..buf_len)).unwrap().to_owned());
 
     // Pick a new centroid with weighted probability of `D(x)^2 / sum(D(x)^2)`,
     // where `D(x)^2` is the distance to the closest centroid
     for _ in 1..k {
         // Calculate the distances to nearest centers, accumulate a sum
         let mut sum = 0.0;
-        for (b, dist) in buf.iter().zip(weights.iter_mut()) {
+        for idx in 0..buf_len {
             let mut diff;
             let mut min = core::f32::MAX;
-            for cent in centroids.iter() {
-                diff = C::difference(b, cent);
+            for cent_idx in 0..centroids.len() {
+                diff = C::difference(&buf[idx], &centroids[cent_idx]);
                 if diff < min {
                     min = diff;
                 }
             }
-            *dist = min;
+            weights[idx] = min;
             sum += min;
         }
 
@@ -52,10 +53,10 @@ pub fn init_plus_plus<C: crate::Calculate + Clone>(
         }
 
         // Divide distances by sum to find D^2 weighting for distribution
-        weights.iter_mut().for_each(|x| *x /= sum);
+        weights.par_iter_mut().for_each(|x: &mut f32| *x /= sum);
 
         // Choose next centroid based on weights
-        let sampler = WeightedIndex::new(&weights).unwrap();
+        let sampler: WeightedIndex<f32> = WeightedIndex::new(&weights).unwrap();
         centroids.push(buf.get(sampler.sample(&mut rng)).unwrap().to_owned());
     }
 }
