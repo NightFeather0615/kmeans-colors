@@ -9,35 +9,37 @@ Example with `rayon`, `rand` and `image`:
 ```rust
 use image::{io, DynamicImage};
 use rayon::prelude::*;
-use kmeans_colors::get_kmeans_hamerly;
-use rand::Rng;
+use kmeans_colors::{get_kmeans_hamerly, Kmeans};
 
-async fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
   let img: DynamicImage = io::Reader::open(
     "path",
   )?.decode()?;
   
-  let k = 1;
-  let max_iter = 10;
-  let converge = 1.0;
+  let k: usize = 1;
+  let max_iter: usize = 10;
+  let converge: f32 = 1.0;
   let z: Vec<[f32; 3]> = img
     .as_bytes()
     .par_chunks_exact(3)
     .map(
-      |f| [f[0] as f32, f[1] as f32, f[2] as f32]
+      |rgb: &[u8]|
+        [
+          rgb[0] as f32,
+          rgb[1] as f32,
+          rgb[2] as f32
+        ]
     )
     .collect::<Vec<[f32; 3]>>();
-  let mut rng = rand::thread_rng();
 
-  let run_result = get_kmeans_hamerly(
-      k,
-      max_iter,
-      converge,
-      false,
-      &z,
-      rng.gen::<u64>(),
+  let run_result: Kmeans<[f32; 3]> = get_kmeans_hamerly(
+    k,
+    max_iter,
+    converge,
+    false,
+    &z
   );
-  println!("{:#?}", run_result.centroids[0]);
+  println!("{:#?}", run_result.centroids);
 
   Ok(())
 }
