@@ -1,7 +1,6 @@
 #[cfg(feature = "palette_color")]
 use palette::{Lab, Srgb};
-
-use rand::Rng;
+use rand::{Rng};
 
 use crate::kmeans::{Calculate, Hamerly, HamerlyCentroids, HamerlyPoint};
 
@@ -158,6 +157,81 @@ impl Calculate for Srgb {
         (c1.red - c2.red) * (c1.red - c2.red)
             + (c1.green - c2.green) * (c1.green - c2.green)
             + (c1.blue - c2.blue) * (c1.blue - c2.blue)
+    }
+}
+
+impl Calculate for [f32; 3] {
+    fn get_closest_centroid(rgb: &[[f32; 3]], centroids: &[[f32; 3]], indices: &mut Vec<u8>) {
+        for rgb_idx in 0..rgb.len() {
+            let mut index = 0;
+            let mut diff;
+            let mut min = core::f32::MAX;
+            for cent_idx in 0..centroids.len() {
+                diff = Self::difference(&rgb[rgb_idx], &centroids[cent_idx]);
+                if diff < min {
+                    min = diff;
+                    index = cent_idx;
+                }
+            }
+            indices.push(index as u8);
+        }
+    }
+
+    fn recalculate_centroids(
+        mut rng: &mut impl Rng,
+        buf: &[[f32; 3]],
+        centroids: &mut [[f32; 3]],
+        indices: &[u8],
+    ) {
+        // let mut rng = rand::thread_rng();
+        for cent_idx in 0..centroids.len() {
+            let mut red = 0.0;
+            let mut green = 0.0;
+            let mut blue = 0.0;
+            let mut counter: u64 = 0;
+            for (jdx, color) in indices.iter().zip(buf) {
+                if *jdx == cent_idx as u8 {
+                    red += color[0];
+                    green += color[1];
+                    blue += color[2];
+                    counter += 1;
+                }
+            }
+            if counter != 0 {
+                centroids[cent_idx] = [
+                    red / (counter as f32),
+                    green / (counter as f32),
+                    blue / (counter as f32),
+                ];
+            } else {
+                centroids[cent_idx] = Self::create_random(&mut rng);
+            }
+        }
+    }
+
+    fn check_loop(centroids: &[[f32; 3]], old_centroids: &[[f32; 3]]) -> f32 {
+        let mut red = 0.0;
+        let mut green = 0.0;
+        let mut blue = 0.0;
+        for c in centroids.iter().zip(old_centroids) {
+            red += (c.0)[0] - (c.1)[0];
+            green += (c.0)[1] - (c.1)[1];
+            blue += (c.0)[2] - (c.1)[2];
+        }
+
+        red * red + green * green + blue * blue
+    }
+
+    #[inline]
+    fn create_random(rng: &mut impl Rng) -> [f32; 3] {
+        [rng.gen_range(0.0..255.0), rng.gen_range(0.0..255.0), rng.gen_range(0.0..255.0)]
+    }
+
+    #[inline]
+    fn difference(c1: &[f32; 3], c2: &[f32; 3]) -> f32 {
+        (c1[0] - c2[0]) * (c1[0] - c2[0])
+            + (c1[1] - c2[1]) * (c1[1] - c2[1])
+            + (c1[2] - c2[2]) * (c1[2] - c2[2])
     }
 }
 
@@ -408,6 +482,140 @@ impl Hamerly for Srgb {
                     blue: blue / (counter as f32),
                     standard: core::marker::PhantomData,
                 };
+                *delta = Self::difference(cent, &new_color).sqrt();
+                *cent = new_color;
+            } else {
+                let new_color = Self::create_random(&mut rng);
+                *delta = Self::difference(cent, &new_color).sqrt();
+                *cent = new_color;
+            }
+        }
+    }
+
+    fn update_bounds(centers: &HamerlyCentroids<Self>, points: &mut [HamerlyPoint]) {
+        let mut delta_p = 0.0;
+        for c in centers.deltas.iter() {
+            if *c > delta_p {
+                delta_p = *c;
+            }
+        }
+
+        for point in points.iter_mut() {
+            point.upper_bound += centers.deltas.get(point.index as usize).unwrap();
+            point.lower_bound -= delta_p;
+        }
+    }
+}
+
+impl Hamerly for [f32; 3] {
+    fn compute_half_distances(centers: &mut HamerlyCentroids<Self>) {
+        // Find each center's closest center
+        for ((i, ci), half_dist) in centers
+            .centroids
+            .iter()
+            .enumerate()
+            .zip(centers.half_distances.iter_mut())
+        {
+            let mut diff;
+            let mut min = f32::MAX;
+            for (j, cj) in centers.centroids.iter().enumerate() {
+                // Don't compare centroid to itself
+                if i == j {
+                    continue;
+                }
+                diff = Self::difference(ci, cj);
+                if diff < min {
+                    min = diff;
+                }
+            }
+            *half_dist = min.sqrt() * 0.5;
+        }
+    }
+
+    fn get_closest_centroid_hamerly(
+        buffer: &[Self],
+        centers: &HamerlyCentroids<Self>,
+        points: &mut [HamerlyPoint],
+    ) {
+        for (val, point) in buffer.iter().zip(points.iter_mut()) {
+            // Assign max of lower bound and half distance to z
+            let z = centers
+                .half_distances
+                .get(point.index as usize)
+                .unwrap()
+                .max(point.lower_bound);
+
+            if point.upper_bound <= z {
+                continue;
+            }
+
+            // Tighten upper bound
+            point.upper_bound =
+                Self::difference(val, centers.centroids.get(point.index as usize).unwrap()).sqrt();
+
+            if point.upper_bound <= z {
+                continue;
+            }
+
+            // Find the two closest centers to current point and their distances
+            if centers.centroids.len() < 2 {
+                continue;
+            }
+
+            let mut min1 = Self::difference(val, centers.centroids.get(0).unwrap());
+            let mut min2 = f32::MAX;
+            let mut c1 = 0;
+            for j in 1..centers.centroids.len() {
+                let diff = Self::difference(val, centers.centroids.get(j).unwrap());
+                if diff < min1 {
+                    min2 = min1;
+                    min1 = diff;
+                    c1 = j;
+                    continue;
+                }
+                if diff < min2 {
+                    min2 = diff;
+                }
+            }
+
+            if c1 as u8 != point.index {
+                point.index = c1 as u8;
+                point.upper_bound = min1.sqrt();
+            }
+            point.lower_bound = min2.sqrt();
+        }
+    }
+
+    fn recalculate_centroids_hamerly(
+        mut rng: &mut impl Rng,
+        buf: &[Self],
+        centers: &mut HamerlyCentroids<Self>,
+        points: &[HamerlyPoint],
+    ) {
+        for ((idx, cent), delta) in centers
+            .centroids
+            .iter_mut()
+            .enumerate()
+            .zip(centers.deltas.iter_mut())
+        {
+            let mut red = 0.0;
+            let mut green = 0.0;
+            let mut blue = 0.0;
+            let mut counter: u64 = 0;
+            for (point, color) in points.iter().zip(buf) {
+                if point.index == idx as u8 {
+                    red += color[0];
+                    green += color[1];
+                    blue += color[2];
+                    counter += 1;
+                }
+            }
+            if counter != 0 {
+                let new_color = [
+                    red / (counter as f32),
+                    green / (counter as f32),
+                    blue / (counter as f32),
+                ];
                 *delta = Self::difference(cent, &new_color).sqrt();
                 *cent = new_color;
             } else {

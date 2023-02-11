@@ -33,6 +33,9 @@ default-features = false
 features = ["jpeg", "png"]
 optional = true
 
+[dependencies.rayon]
+version = "1.6.*"
+
 [dependencies.palette]
 version = "0.6.0"
 default-features = false
@@ -41,7 +44,6 @@ optional = true
 
 [dependencies.rand]
 version = "0.8.5"
-default-features = false
 features = ["std"]
 
 [dependencies.rand_chacha]
