@@ -1,4 +1,5 @@
 use rand::{Rng, SeedableRng, rngs::SmallRng, thread_rng};
+use rayon::prelude::*;
 
 /// A trait for enabling k-means calculation of a data type.
 pub trait Calculate: Sized {
@@ -69,14 +70,14 @@ pub fn get_kmeans<C: Calculate + Clone>(
     buf: &[C],
 ) -> Kmeans<C> {
     // Initialize the random centroids
-    let mut rng = SmallRng::from_rng(thread_rng()).unwrap();
+    let mut rng: SmallRng = SmallRng::from_rng(thread_rng()).unwrap();
     let mut centroids: Vec<C> = Vec::with_capacity(k);
     crate::plus_plus::init_plus_plus(k, &mut rng, buf, &mut centroids);
 
     // Initialize indexed buffer and convergence variables
-    let mut iterations = 0;
-    let mut score;
-    let mut old_centroids = centroids.clone();
+    let mut iterations: usize = 0;
+    let mut score: f32;
+    let mut old_centroids: Vec<C> = centroids.clone();
     let mut indices: Vec<u8> = Vec::with_capacity(buf.len());
 
     // Main loop: find nearest centroids and recalculate means until convergence
@@ -154,8 +155,8 @@ impl<C: Hamerly> HamerlyCentroids<C> {
     pub fn new(capacity: usize) -> Self {
         HamerlyCentroids {
             centroids: Vec::with_capacity(capacity),
-            deltas: (0..capacity).map(|_| 0.0).collect(),
-            half_distances: (0..capacity).map(|_| 0.0).collect(),
+            deltas: (0..capacity).into_par_iter().map(|_| 0.0).collect(),
+            half_distances: (0..capacity).into_par_iter().map(|_| 0.0).collect(),
         }
     }
 }
@@ -223,15 +224,15 @@ pub fn get_kmeans_hamerly<C: Hamerly + Clone>(
     buf: &[C],
 ) -> Kmeans<C> {
     // Initialize the random centroids
-    let mut rng = SmallRng::from_rng(thread_rng()).unwrap();
+    let mut rng:SmallRng = SmallRng::from_rng(thread_rng()).unwrap();
     let mut centers: HamerlyCentroids<C> = HamerlyCentroids::new(k);
     crate::plus_plus::init_plus_plus(k, &mut rng, buf, &mut centers.centroids);
 
     // Initialize points buffer and convergence variables
-    let mut iterations = 0;
-    let mut score;
-    let mut old_centers = centers.centroids.clone();
-    let mut points: Vec<HamerlyPoint> = (0..buf.len()).map(|_| HamerlyPoint::new()).collect();
+    let mut iterations: usize = 0;
+    let mut score: f32;
+    let mut old_centers: Vec<C> = centers.centroids.clone();
+    let mut points: Vec<HamerlyPoint> = (0..buf.len()).into_par_iter().map(|_| HamerlyPoint::new()).collect();
 
     // Main loop: find nearest centroids and recalculate means until convergence
     loop {
@@ -262,6 +263,6 @@ pub fn get_kmeans_hamerly<C: Hamerly + Clone>(
     Kmeans {
         score,
         centroids: centers.centroids,
-        indices: points.iter().map(|x| x.index).collect(),
+        indices: points.par_iter().map(|x: &HamerlyPoint| x.index).collect(),
     }
 }

@@ -50,7 +50,6 @@ pub fn run(opt: Opt) -> Result<(), Box<dyn Error>> {
                         converge,
                         opt.verbose,
                         &lab,
-                        seed + i as u64,
                     );
                     if run_result.score < result.score {
                         result = run_result;
@@ -64,7 +63,6 @@ pub fn run(opt: Opt) -> Result<(), Box<dyn Error>> {
                         converge,
                         opt.verbose,
                         &lab,
-                        seed + i as u64,
                     );
                     if run_result.score < result.score {
                         result = run_result;
@@ -183,7 +181,6 @@ pub fn run(opt: Opt) -> Result<(), Box<dyn Error>> {
                         converge,
                         opt.verbose,
                         &rgb,
-                        seed + i as u64,
                     );
                     if run_result.score < result.score {
                         result = run_result;
@@ -197,7 +194,6 @@ pub fn run(opt: Opt) -> Result<(), Box<dyn Error>> {
                         converge,
                         opt.verbose,
                         &rgb,
-                        seed + i as u64,
                     );
                     if run_result.score < result.score {
                         result = run_result;
@@ -430,7 +426,6 @@ pub fn find_colors(
                             converge,
                             verbose,
                             &lab,
-                            seed + i as u64,
                         );
                         if run_result.score < result.score {
                             result = run_result;
@@ -439,7 +434,7 @@ pub fn find_colors(
                 } else {
                     for i in 0..runs {
                         let run_result =
-                            get_kmeans(k, max_iter, converge, verbose, &lab, seed + i as u64);
+                            get_kmeans(k, max_iter, converge, verbose, &lab);
                         if run_result.score < result.score {
                             result = run_result;
                         }
@@ -632,7 +627,6 @@ pub fn find_colors(
                             converge,
                             verbose,
                             &rgb,
-                            seed + i as u64,
                         );
                         if run_result.score < result.score {
                             result = run_result;
@@ -641,7 +635,7 @@ pub fn find_colors(
                 } else {
                     for i in 0..runs {
                         let run_result =
-                            get_kmeans(k, max_iter, converge, verbose, &rgb, seed + i as u64);
+                            get_kmeans(k, max_iter, converge, verbose, &rgb);
                         if run_result.score < result.score {
                             result = run_result;
                         }
