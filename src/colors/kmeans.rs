@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::{Rng, thread_rng};
 use rayon::prelude::*;
 
 use crate::kmeans::{Calculate, Hamerly, HamerlyCentroids, HamerlyPoint};
@@ -26,13 +26,12 @@ impl Calculate for [f32; 3] {
     }
 
     fn recalculate_centroids(
-        mut rng: &mut impl Rng,
         buf: &[[f32; 3]],
         centroids: &mut [[f32; 3]],
         indices: &[u8],
     ) {
         centroids
-            .iter_mut()
+            .par_iter_mut()
             .enumerate()
             .for_each(|(i, centroid): (usize, &mut [f32; 3])| {
                 let (red, green, blue, count): (f32, f32, f32, i32) = indices
@@ -60,7 +59,12 @@ impl Calculate for [f32; 3] {
                         blue / count as f32,
                     ];
                 } else {
-                    *centroid = Self::create_random(&mut rng);
+                    let mut trng = thread_rng();
+                    *centroid = [
+                        trng.gen_range(0.0..255.0),
+                        trng.gen_range(0.0..255.0),
+                        trng.gen_range(0.0..255.0),
+                    ];
                 }
             });
     }

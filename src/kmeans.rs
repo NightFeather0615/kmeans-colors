@@ -10,7 +10,6 @@ pub trait Calculate: Sized {
     /// correspond to the centroid. If no points correspond, the centroid is
     /// re-initialized with a random point.
     fn recalculate_centroids(
-        rng: &mut impl Rng,
         buf: &[Self],
         centroids: &mut [Self],
         indices: &[u8],
@@ -83,7 +82,7 @@ pub fn get_kmeans<C: Calculate + Clone + Sync + Send>(
     // Main loop: find nearest centroids and recalculate means until convergence
     loop {
         C::get_closest_centroid(buf, &centroids, &mut indices);
-        C::recalculate_centroids(&mut rng, buf, &mut centroids, &indices);
+        C::recalculate_centroids(buf, &mut centroids, &indices);
 
         score = C::check_loop(&centroids, &old_centroids);
         if verbose {

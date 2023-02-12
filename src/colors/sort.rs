@@ -1,121 +1,7 @@
+use std::cmp::Ordering;
+
 use crate::sort::{CentroidData, Sort};
-
-// impl<Wp: palette::white_point::WhitePoint> Sort for palette::Lab<Wp> {
-//     fn get_dominant_color(data: &[CentroidData<Self>]) -> Option<Self> {
-//         data.iter()
-//             .max_by(|a, b| (a.percentage).partial_cmp(&b.percentage).unwrap())
-//             .map(|res| res.centroid)
-//     }
-
-//     fn sort_indexed_colors(centroids: &[Self], indices: &[u8]) -> Vec<CentroidData<Self>> {
-//         // Count occurences of each color - "histogram"
-//         let mut map: std::collections::HashMap<u8, u64> = std::collections::HashMap::new();
-//         for (i, _) in centroids.iter().enumerate() {
-//             map.insert(i as u8, 0);
-//         }
-//         for i in indices {
-//             let count = map.entry(*i).or_insert(0);
-//             *count += 1;
-//         }
-
-//         let len = indices.len();
-//         assert!(len > 0);
-//         let mut colors: Vec<(u8, f32)> = Vec::with_capacity(centroids.len());
-//         for (i, _) in centroids.iter().enumerate() {
-//             let count = map.get(&(i as u8));
-//             match count {
-//                 Some(x) => colors.push((i as u8, (*x as f32) / (len as f32))),
-//                 None => continue,
-//             }
-//         }
-
-//         // Sort by increasing luminosity
-//         let mut lab: Vec<(u8, Self)> = centroids
-//             .iter()
-//             .enumerate()
-//             .map(|(i, x)| (i as u8, *x))
-//             .collect();
-//         lab.sort_unstable_by(|a, b| (a.1.l).partial_cmp(&b.1.l).unwrap());
-
-//         // Pack the colors and their percentages into the return vector.
-//         // Get the lab's key from the map, if the key value is greater than one
-//         // attempt to find the index of it in the colors vec. Push that to the
-//         // output vec tuple if successful.
-//         lab.iter()
-//             .filter_map(|x| map.get_key_value(&x.0))
-//             .filter(|x| *x.1 > 0)
-//             .filter_map(|x| match colors.get(*x.0 as usize) {
-//                 Some(x) => colors
-//                     .iter()
-//                     .position(|a| a.0 == x.0 as u8)
-//                     .map(|y| CentroidData {
-//                         centroid: *(centroids.get(colors.get(y).unwrap().0 as usize).unwrap()),
-//                         percentage: colors.get(y).unwrap().1,
-//                         index: y as u8,
-//                     }),
-//                 None => None,
-//             })
-//             .collect()
-//     }
-// }
-
-// impl Sort for palette::Srgb {
-//     fn get_dominant_color(data: &[CentroidData<Self>]) -> Option<Self> {
-//         data.iter()
-//             .max_by(|a, b| (a.percentage).partial_cmp(&b.percentage).unwrap())
-//             .map(|res| res.centroid)
-//     }
-
-//     fn sort_indexed_colors(centroids: &[Self], indices: &[u8]) -> Vec<CentroidData<Self>> {
-//         use palette::IntoColor;
-
-//         // Count occurences of each color - "histogram"
-//         let mut map: std::collections::HashMap<u8, u64> = std::collections::HashMap::new();
-//         for (i, _) in centroids.iter().enumerate() {
-//             map.insert(i as u8, 0);
-//         }
-//         for i in indices {
-//             let count = map.entry(*i).or_insert(0);
-//             *count += 1;
-//         }
-
-//         let len = indices.len();
-//         assert!(len > 0);
-//         let mut colors: Vec<(u8, f32)> = Vec::with_capacity(centroids.len());
-//         for (i, _) in centroids.iter().enumerate() {
-//             let count = map.get(&(i as u8));
-//             match count {
-//                 Some(x) => colors.push((i as u8, (*x as f32) / (len as f32))),
-//                 None => continue,
-//             }
-//         }
-
-//         // Sort by increasing luminosity
-//         let mut lab: Vec<(u8, palette::luma::Luma)> = centroids
-//             .iter()
-//             .enumerate()
-//             .map(|(i, x)| (i as u8, x.into_format().into_color()))
-//             .collect();
-//         lab.sort_unstable_by(|a, b| (a.1.luma).partial_cmp(&b.1.luma).unwrap());
-
-//         // Pack the colors and their percentages into the return vector
-//         lab.iter()
-//             .filter_map(|x| map.get_key_value(&x.0))
-//             .filter(|x| *x.1 > 0)
-//             .filter_map(|x| match colors.get(*x.0 as usize) {
-//                 Some(x) => colors
-//                     .iter()
-//                     .position(|a| a.0 == x.0 as u8)
-//                     .map(|y| CentroidData {
-//                         centroid: *(centroids.get(colors.get(y).unwrap().0 as usize).unwrap()),
-//                         percentage: colors.get(y).unwrap().1,
-//                         index: y as u8,
-//                     }),
-//                 None => None,
-//             })
-//             .collect()
-//     }
-// }
+use rayon::prelude::*;
 
 impl Sort for [f32; 3] {
     fn get_dominant_color(data: &[CentroidData<Self>]) -> Option<Self> {
@@ -124,85 +10,98 @@ impl Sort for [f32; 3] {
             .map(|res| res.centroid)
     }
 
-    fn sort_indexed_colors(_: &[Self], _: &[u8]) -> Vec<CentroidData<Self>> {
-        // use palette::IntoColor;
+    fn sort_colors(centroids: &[Self]) -> Vec<Self> {
+        let mut rgb_colors: Vec<[f32; 3]> = centroids.to_vec();
+        let is_percentage =  centroids.par_iter().any(|rgb: &[f32; 3]| rgb.par_iter().any(|v| *v > 1.0));
 
-        // // Count occurences of each color - "histogram"
-        // let mut map: std::collections::HashMap<u8, u64> = std::collections::HashMap::new();
-        // for (i, _) in centroids.iter().enumerate() {
-        //     map.insert(i as u8, 0);
-        // }
-        // for i in indices {
-        //     let count = map.entry(*i).or_insert(0);
-        //     *count += 1;
-        // }
+        if !is_percentage {
+            rgb_colors
+                .par_iter_mut()
+                .map(|rgb: &mut [f32; 3]| [rgb[0] / 255.0, rgb[0] / 255.0, rgb[0] / 255.0])
+                .collect::<Vec<[f32; 3]>>();
+        }
 
-        // let len = indices.len();
-        // assert!(len > 0);
-        // let mut colors: Vec<(u8, f32)> = Vec::with_capacity(centroids.len());
-        // for (i, _) in centroids.iter().enumerate() {
-        //     let count = map.get(&(i as u8));
-        //     match count {
-        //         Some(x) => colors.push((i as u8, (*x as f32) / (len as f32))),
-        //         None => continue,
-        //     }
-        // }
+        let mut hsl_colors: Vec<[f32; 3]> = rgb_colors
+            .par_iter()
+            .map(|rgb: &[f32; 3]| {
+                let (max_value, min_value): (f32, f32) = rgb.iter().fold(
+                    (f32::NEG_INFINITY, f32::INFINITY),
+                    |(max, min): (f32, f32), &val: &f32| (max.max(val), min.min(val)),
+                );
+                let luminance: f32 = (max_value + min_value) / 2.0;
+                let saturation: f32 = match max_value == min_value {
+                    true => 0.0,
+                    false if luminance <= 0.5 => (max_value - min_value) / (max_value + min_value),
+                    false => (max_value - min_value) / (2.0 - max_value - min_value),
+                };
+                let mut hue: f32 = if max_value == rgb[0] {
+                    ((rgb[1] - rgb[2]) / (max_value - min_value)) * 60.0
+                } else if max_value == rgb[1] {
+                    (2.0 + (rgb[2] - rgb[0]) / (max_value - min_value)) * 60.0
+                } else {
+                    (4.0 + (rgb[0] - rgb[1]) / (max_value - min_value)) * 60.0
+                };
 
-        // // Sort by increasing luminosity
-        // let mut lab: Vec<(u8, palette::luma::Luma)> = centroids
-        //     .iter()
-        //     .enumerate()
-        //     .map(|(i, x)| (i as u8, x.into_format().into_color()))
-        //     .collect();
-        // lab.sort_unstable_by(|a, b| (a.1.luma).partial_cmp(&b.1.luma).unwrap());
+                if hue.is_sign_negative() {
+                    hue += 360.0;
+                }
 
-        // // Pack the colors and their percentages into the return vector
-        // lab.iter()
-        //     .filter_map(|x| map.get_key_value(&x.0))
-        //     .filter(|x| *x.1 > 0)
-        //     .filter_map(|x| match colors.get(*x.0 as usize) {
-        //         Some(x) => colors
-        //             .iter()
-        //             .position(|a| a.0 == x.0 as u8)
-        //             .map(|y| CentroidData {
-        //                 centroid: *(centroids.get(colors.get(y).unwrap().0 as usize).unwrap()),
-        //                 percentage: colors.get(y).unwrap().1,
-        //                 index: y as u8,
-        //             }),
-        //         None => None,
-        //     })
-        //     .collect()
+                [hue, saturation, luminance]
+            })
+            .collect();
 
-        vec![]
+        hsl_colors.par_sort_by(|a: &[f32; 3], b: &[f32; 3]| {
+            a[1].partial_cmp(&b[1])
+                .unwrap_or(Ordering::Equal)
+                .then_with(|| a[0].partial_cmp(&b[0]).unwrap_or(Ordering::Equal))
+                .then_with(|| a[2].partial_cmp(&b[2]).unwrap_or(Ordering::Equal))
+        });
+
+        hsl_colors
+            .par_iter_mut()
+            .map(|hsl: &mut [f32; 3]| {
+                if hsl[1] == 0.0 {
+                    return [hsl[2] * 255.0; 3];
+                }
+
+                let tmp1: f32 = if hsl[2] < 0.5 {
+                    hsl[2] * (1.0 + hsl[1])
+                } else {
+                    hsl[2] + hsl[1] - hsl[2] * hsl[1]
+                };
+
+                let tmp2: f32 = 2.0 * hsl[2] - tmp1;
+
+                hsl[0] /= 360.0;
+
+                let tmp_rgb: [f32; 3] = [hsl[0] + 0.333, hsl[0], hsl[0] - 0.333]
+                    .map(|v: f32| {
+                        if v > 1.0 {
+                            return v - 1.0;
+                        } else if v < 0.0 {
+                            return v + 1.0;
+                        } else {
+                            return v;
+                        }
+                    })
+                    .map(|v: f32| {
+                        if v * 6.0 < 1.0 {
+                            tmp2 + (tmp1 - tmp2) * 6.0 * v
+                        } else if v * 2.0 < 1.0 {
+                            tmp1
+                        } else if v * 3.0 < 2.0 {
+                            tmp2 + (tmp1 - tmp2) * (0.666 - v) * 6.0
+                        } else {
+                            tmp2
+                        }
+                    });
+
+                if !is_percentage {
+                    tmp_rgb.map(|v: f32| v * 255.0);
+                }
+
+                tmp_rgb
+            })
+            .collect()
     }
-}
-
-#[cfg(test)]
-mod tests {
-    // use crate::{CentroidData, Sort};
-
-    // #[test]
-    // fn dominant_color() {
-    //     let res = vec![
-    //         CentroidData::<Srgb> {
-    //             centroid: Srgb::new(0.0, 0.0, 0.0),
-    //             percentage: 0.5,
-    //             index: 0,
-    //         },
-    //         CentroidData::<Srgb> {
-    //             centroid: Srgb::new(0.5, 0.5, 0.5),
-    //             percentage: 0.80,
-    //             index: 0,
-    //         },
-    //         CentroidData::<Srgb> {
-    //             centroid: Srgb::new(1.0, 1.0, 1.0),
-    //             percentage: 0.15,
-    //             index: 0,
-    //         },
-    //     ];
-    //     assert_eq!(
-    //         Srgb::get_dominant_color(&res).unwrap(),
-    //         Srgb::new(0.5, 0.5, 0.5)
-    //     );
-    // }
 }

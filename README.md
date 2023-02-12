@@ -13,7 +13,7 @@ are binarization and "color style" transfer.
 
 [lib]: https://docs.rs/kmeans_colors/
 
-This is a personal fork of the `kmeans-colors` library, optimized for Windows (haven't tested on other platform), removes application functionality and breaks the dependency on the `palette` library by using `[f32; 3]` (`[r, g, b]`) instead of `Srgb` and `Lab` in the `palette` to improve computational efficiency. Using such deeply specialized forks may lead to unknown errors. The `sort` feature of `[f32; 3]` is not implemented in this fork.
+This is a personal fork of the `kmeans-colors` library, optimized for Windows (haven't tested on other platform), removes application functionality and breaks the dependency on the `palette` library by using `[f32; 3]` (`[r, g, b]`) instead of `Srgb` and `Lab` in the `palette` to improve computational efficiency. Using such deeply specialized forks may lead to unknown errors. The `get_kmeans_hamerly` function is broken in this fork.
 
 This fork is optimized using `rayon` and small_rng from the `rand` library.
 
