@@ -31,22 +31,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   let k: usize = 1;
   let max_iter: usize = 10;
   let converge: f32 = 1.0;
+  let step_img_nth: usize = 2;
   let z: Vec<[f32; 3]> = img
     .into_rgb32f()
     .par_chunks_exact(3)
-    .map(
-      |rgb: &[f32]| [rgb[0], rgb[1], rgb[2]]
-    )
+    .map(|rgb: &[f32]| [rgb[0], rgb[1], rgb[2]])
+    .step_by(step_img_nth)
     .collect();
 
-  let run_result: Kmeans<[f32; 3]> = get_kmeans_hamerly(
-    k,
-    max_iter,
-    converge,
-    false,
-    &z
-  );
-  println!("{:#?}", run_result.centroids);
+  let run_result: Kmeans<[f32; 3]> = get_kmeans(k, max_iter, converge, false, &z);
+
+  run_result.centroids.par_iter().for_each(|color| {
+    println!(
+      "\x1b[48;2;{0};{1};{2}m #{0:02X}{1:02X}{2:02X} \x1b[0m",
+      (color[0] * 255.0) as u8,
+      (color[1] * 255.0) as u8,
+      (color[2] * 255.0) as u8
+    )
+  });
 
   Ok(())
 }
