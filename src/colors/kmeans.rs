@@ -148,7 +148,7 @@ impl Hamerly for [f32; 3] {
     }
 
     fn recalculate_centroids_hamerly(
-        mut rng: &mut (impl Rng + Send + Sync),
+        mut rng: &mut impl Rng,
         buf: &[Self],
         centers: &mut HamerlyCentroids<Self>,
         points: &[HamerlyPoint],
