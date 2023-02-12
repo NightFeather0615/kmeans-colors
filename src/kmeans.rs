@@ -62,7 +62,7 @@ impl<C: Calculate> Kmeans<C> {
 /// - `verbose` - flag for printing convergence information to console.
 /// - `buf` - array of points.
 /// - `seed` - seed for the random number generator.
-pub fn get_kmeans<C: Calculate + Clone>(
+pub fn get_kmeans<C: Calculate + Clone + Sync + Send>(
     k: usize,
     max_iter: usize,
     converge: f32,
@@ -113,7 +113,7 @@ pub fn get_kmeans<C: Calculate + Clone>(
 }
 
 /// A trait for calculating k-means with the Hamerly algorithm.
-pub trait Hamerly: Calculate {
+pub trait Hamerly: Calculate + Send + Sync {
     /// Find the nearest centers and compute their half-distances.
     fn compute_half_distances(centroids: &mut HamerlyCentroids<Self>);
 
@@ -128,7 +128,7 @@ pub trait Hamerly: Calculate {
     /// correspond to the centroid. If no points correspond, the centroid is
     /// re-initialized with a random point.
     fn recalculate_centroids_hamerly(
-        rng: &mut impl Rng,
+        rng: &mut (impl Rng + Send + Sync),
         buf: &[Self],
         centroids: &mut HamerlyCentroids<Self>,
         points: &[HamerlyPoint],

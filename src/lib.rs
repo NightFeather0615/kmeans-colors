@@ -187,18 +187,16 @@
 //! ```
 #![warn(missing_docs, rust_2018_idioms, unsafe_code)]
 
-#[cfg(feature = "palette_color")]
 mod colors;
 
 mod kmeans;
 mod plus_plus;
 mod sort;
 
-#[cfg(feature = "palette_color")]
 pub use colors::MapColor;
 
 pub use kmeans::{
-    get_kmeans, get_kmeans_hamerly, Calculate, Hamerly, HamerlyCentroids, HamerlyPoint, Kmeans,
+    get_kmeans, get_kmeans_hamerly, Kmeans, Calculate
 };
 pub use plus_plus::init_plus_plus;
 pub use sort::{CentroidData, Sort};

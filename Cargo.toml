@@ -2,51 +2,29 @@
 name = "kmeans_colors"
 version = "0.5.0"
 authors = ["okaneco <47607823+okaneco@users.noreply.github.com>"]
-edition = "2018"
+edition = "2021"
 exclude = ["test", "gfx", ".github"]
 homepage = "https://github.com/okaneco/kmeans-colors"
 repository = "https://github.com/okaneco/kmeans-colors"
 readme = "README.md"
-keywords = ["kmeans", "clustering", "lab", "color", "rgb"]
+keywords = ["kmeans", "clustering", "color", "rgb"]
 categories = ["graphics", "multimedia::images", "mathematics"]
 license = "MIT OR Apache-2.0"
 description = """Simple k-means clustering to find dominant colors in images.
 Backed by a generic k-means implementation offered as a standalone library."""
 
-[features]
-default = ["lib"]
-
-lib = [
-    "palette_color",
-]
-
-# Enable `palette` color types
-palette_color = ["palette"]
-
-[dependencies.image]
-version = "0.24.1"
-default-features = false
-features = ["jpeg", "png"]
-optional = true
-
 [dependencies.rayon]
 version = "1.6.*"
-
-[dependencies.palette]
-version = "0.6.0"
-default-features = false
-features = ["std"]
-optional = true
 
 [dependencies.rand]
 version = "0.8.5"
 features = ["std", "small_rng"]
 
 [profile.release]
-strip = true
-lto = true
+strip = "symbols"
+lto = "fat"
 codegen-units = 1
-opt-level = 3
+opt-level = 2
 
 [package.metadata.docs.rs]
 no-default-features = true
