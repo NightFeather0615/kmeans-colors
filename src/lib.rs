@@ -195,8 +195,6 @@ mod sort;
 
 pub use colors::MapColor;
 
-pub use kmeans::{
-    get_kmeans, get_kmeans_hamerly, Kmeans, Calculate
-};
+pub use kmeans::{get_kmeans, get_kmeans_hamerly, Calculate, Kmeans};
 pub use plus_plus::init_plus_plus;
 pub use sort::{CentroidData, Sort};

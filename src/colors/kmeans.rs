@@ -12,7 +12,13 @@ impl Calculate for [f32; 3] {
                 .enumerate()
                 .reduce(
                     || (0, f32::INFINITY),
-                    |(i1, d1): (usize, f32), (i2, d2): (usize, f32)| if d1 < d2 { (i1, d1) } else { (i2, d2) },
+                    |(i1, d1): (usize, f32), (i2, d2): (usize, f32)| {
+                        if d1 < d2 {
+                            (i1, d1)
+                        } else {
+                            (i2, d2)
+                        }
+                    },
                 )
                 .0 as u8;
             indices.push(index);
@@ -25,30 +31,38 @@ impl Calculate for [f32; 3] {
         centroids: &mut [[f32; 3]],
         indices: &[u8],
     ) {
-        centroids.iter_mut().enumerate().for_each(|(i, centroid): (usize, &mut [f32; 3])| {
-            let (red, green, blue, count): (f32, f32, f32, i32) = indices
-                .into_par_iter()
-                .zip(buf.into_par_iter())
-                .filter(|(&index, _)| index == i as u8)
-                .fold(
-                    || (0.0, 0.0, 0.0, 0),
-                    |(r, g, b, c): (f32, f32, f32, i32), (_, color)| (r + color[0], g + color[1], b + color[2], c + 1),
-                )
-                .reduce(
-                    || (0.0, 0.0, 0.0, 0),
-                    |(r1, g1, b1, c1): (f32, f32, f32, i32), (r2, g2, b2, c2): (f32, f32, f32, i32)| (r1 + r2, g1 + g2, b1 + b2, c1 + c2),
-                );
+        centroids
+            .iter_mut()
+            .enumerate()
+            .for_each(|(i, centroid): (usize, &mut [f32; 3])| {
+                let (red, green, blue, count): (f32, f32, f32, i32) = indices
+                    .into_par_iter()
+                    .zip(buf.into_par_iter())
+                    .filter(|(&index, _)| index == i as u8)
+                    .fold(
+                        || (0.0, 0.0, 0.0, 0),
+                        |(r, g, b, c): (f32, f32, f32, i32), (_, color)| {
+                            (r + color[0], g + color[1], b + color[2], c + 1)
+                        },
+                    )
+                    .reduce(
+                        || (0.0, 0.0, 0.0, 0),
+                        |(r1, g1, b1, c1): (f32, f32, f32, i32),
+                         (r2, g2, b2, c2): (f32, f32, f32, i32)| {
+                            (r1 + r2, g1 + g2, b1 + b2, c1 + c2)
+                        },
+                    );
 
-            if count != 0 {
-                *centroid = [
-                    red / count as f32,
-                    green / count as f32,
-                    blue / count as f32,
-                ];
-            } else {
-                *centroid = Self::create_random(&mut rng);
-            }
-        });
+                if count != 0 {
+                    *centroid = [
+                        red / count as f32,
+                        green / count as f32,
+                        blue / count as f32,
+                    ];
+                } else {
+                    *centroid = Self::create_random(&mut rng);
+                }
+            });
     }
 
     fn check_loop(centroids: &[[f32; 3]], old_centroids: &[[f32; 3]]) -> f32 {
@@ -77,15 +91,18 @@ impl Calculate for [f32; 3] {
 impl Hamerly for [f32; 3] {
     fn compute_half_distances(centers: &mut HamerlyCentroids<Self>) {
         let centroids: &Vec<[f32; 3]> = &centers.centroids;
-        centers.half_distances.par_iter_mut().enumerate().for_each(|(idx, half_dist): (usize, &mut f32)| {
-            let min_diff: f32 = (0..centroids.len())
-                .filter(|&jdx: &usize| idx != jdx)
-                .fold(f32::MAX, |min: f32, jdx: usize| {
-                    let diff: f32 = Self::difference(&centroids[idx], &centroids[jdx]);
-                    f32::min(min, diff)
-                });
-            *half_dist = 0.5 * min_diff.sqrt();
-        });
+        centers.half_distances.par_iter_mut().enumerate().for_each(
+            |(idx, half_dist): (usize, &mut f32)| {
+                let min_diff: f32 = (0..centroids.len()).filter(|&jdx: &usize| idx != jdx).fold(
+                    f32::MAX,
+                    |min: f32, jdx: usize| {
+                        let diff: f32 = Self::difference(&centroids[idx], &centroids[jdx]);
+                        f32::min(min, diff)
+                    },
+                );
+                *half_dist = 0.5 * min_diff.sqrt();
+            },
+        );
     }
 
     fn get_closest_centroid_hamerly(
@@ -96,49 +113,70 @@ impl Hamerly for [f32; 3] {
         points.par_iter_mut().for_each(|point: &mut HamerlyPoint| {
             // Assign max of lower bound and half distance to z
             let z: f32 = centers.half_distances[point.index as usize].max(point.lower_bound);
-    
+
             if point.upper_bound <= z {
                 return;
             }
-    
+
             // Tighten upper bound
             let centroid: &[f32; 3] = &centers.centroids[point.index as usize];
             point.upper_bound = Self::difference(&buffer[point.index as usize], centroid).sqrt();
-    
+
             if point.upper_bound <= z {
                 return;
             }
-    
+
             // Find the two closest centers to current point and their distances
             if centers.centroids.len() < 2 {
                 return;
             }
-    
-            let (min1, c1): (f32, usize) = centers.centroids.par_iter().enumerate().skip(1).fold(
-                || (Self::difference(&buffer[point.index as usize], &centers.centroids[0]), 0),
-                |(min, idx): (f32, usize), (j, centroid): (usize, &[f32; 3])| {
-                    let diff: f32 = Self::difference(&buffer[point.index as usize], centroid);
-                    if diff < min {
-                        (diff, j)
-                    } else {
-                        (min, idx)
-                    }
-                },
-            ).reduce(
-                || (f32::MAX, 0),
-                |(a, ia): (f32, usize), (b, ib): (f32, usize)| if a < b { (a, ia) } else { (b, ib) }
-            );
-    
+
+            let (min1, c1): (f32, usize) = centers
+                .centroids
+                .par_iter()
+                .enumerate()
+                .skip(1)
+                .fold(
+                    || {
+                        (
+                            Self::difference(&buffer[point.index as usize], &centers.centroids[0]),
+                            0,
+                        )
+                    },
+                    |(min, idx): (f32, usize), (j, centroid): (usize, &[f32; 3])| {
+                        let diff: f32 = Self::difference(&buffer[point.index as usize], centroid);
+                        if diff < min {
+                            (diff, j)
+                        } else {
+                            (min, idx)
+                        }
+                    },
+                )
+                .reduce(
+                    || (f32::MAX, 0),
+                    |(a, ia): (f32, usize), (b, ib): (f32, usize)| {
+                        if a < b {
+                            (a, ia)
+                        } else {
+                            (b, ib)
+                        }
+                    },
+                );
+
             let mut min2 = f32::MAX;
-            centers.centroids.iter().enumerate().for_each(|(j, centroid): (usize, &[f32; 3])| {
-                if j != c1 && j != point.index as usize {
-                    let diff:f32 = Self::difference(&buffer[point.index as usize], centroid);
-                    if diff < min2 {
-                        min2 = diff;
+            centers
+                .centroids
+                .iter()
+                .enumerate()
+                .for_each(|(j, centroid): (usize, &[f32; 3])| {
+                    if j != c1 && j != point.index as usize {
+                        let diff: f32 = Self::difference(&buffer[point.index as usize], centroid);
+                        if diff < min2 {
+                            min2 = diff;
+                        }
                     }
-                }
-            });
-    
+                });
+
             if c1 != point.index as usize {
                 point.index = c1 as u8;
                 point.upper_bound = min1.sqrt();
@@ -183,7 +221,10 @@ impl Hamerly for [f32; 3] {
     }
 
     fn update_bounds(centers: &HamerlyCentroids<Self>, points: &mut [HamerlyPoint]) {
-        let delta_p: f32 = centers.deltas.iter().fold(0.0, |max_delta: f32, &delta: &f32| delta.max(max_delta));
+        let delta_p: f32 = centers
+            .deltas
+            .iter()
+            .fold(0.0, |max_delta: f32, &delta: &f32| delta.max(max_delta));
 
         points.iter_mut().for_each(|point: &mut HamerlyPoint| {
             point.upper_bound += centers.deltas[point.index as usize];

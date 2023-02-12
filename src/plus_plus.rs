@@ -36,17 +36,20 @@ pub fn init_plus_plus<C: crate::Calculate + Clone + Sync + Send>(
     (1..k).for_each(|_| {
         // Calculate the distances to nearest centers, accumulate a sum
         let mut sum: f32 = 0.0;
-        weights.iter_mut().enumerate().for_each(|(idx, weight): (usize, &mut f32)| {
-            let mut min: f32 = F32_MAX;
-            centroids.iter().for_each(|cent: &C| {
-                let diff:f32 = C::difference(&buf[idx], cent);
-                if diff < min {
-                    min = diff;
-                }
+        weights
+            .iter_mut()
+            .enumerate()
+            .for_each(|(idx, weight): (usize, &mut f32)| {
+                let mut min: f32 = F32_MAX;
+                centroids.iter().for_each(|cent: &C| {
+                    let diff: f32 = C::difference(&buf[idx], cent);
+                    if diff < min {
+                        min = diff;
+                    }
+                });
+                *weight = min;
+                sum += min;
             });
-            *weight = min;
-            sum += min;
-        });
 
         // If centroids match all colors, return early
         if !sum.is_normal() {
@@ -57,7 +60,8 @@ pub fn init_plus_plus<C: crate::Calculate + Clone + Sync + Send>(
         weights.par_iter_mut().for_each(|x: &mut f32| *x /= sum);
 
         // Choose next centroid based on weights
-        let sampler: WeightedIndex<f32> = WeightedIndex::new(&weights).expect("Failed to create weighted index.");
+        let sampler: WeightedIndex<f32> =
+            WeightedIndex::new(&weights).expect("Failed to create weighted index.");
         centroids.push(buf.get(sampler.sample(&mut rng)).unwrap().to_owned());
     });
 }

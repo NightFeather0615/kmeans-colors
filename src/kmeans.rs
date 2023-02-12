@@ -1,4 +1,4 @@
-use rand::{Rng, SeedableRng, rngs::SmallRng, thread_rng};
+use rand::{rngs::SmallRng, thread_rng, Rng, SeedableRng};
 use rayon::prelude::*;
 
 /// A trait for enabling k-means calculation of a data type.
@@ -224,7 +224,7 @@ pub fn get_kmeans_hamerly<C: Hamerly + Clone>(
     buf: &[C],
 ) -> Kmeans<C> {
     // Initialize the random centroids
-    let mut rng:SmallRng = SmallRng::from_rng(thread_rng()).unwrap();
+    let mut rng: SmallRng = SmallRng::from_rng(thread_rng()).unwrap();
     let mut centers: HamerlyCentroids<C> = HamerlyCentroids::new(k);
     crate::plus_plus::init_plus_plus(k, &mut rng, buf, &mut centers.centroids);
 
@@ -232,7 +232,10 @@ pub fn get_kmeans_hamerly<C: Hamerly + Clone>(
     let mut iterations: usize = 0;
     let mut score: f32;
     let mut old_centers: Vec<C> = centers.centroids.clone();
-    let mut points: Vec<HamerlyPoint> = (0..buf.len()).into_par_iter().map(|_| HamerlyPoint::new()).collect();
+    let mut points: Vec<HamerlyPoint> = (0..buf.len())
+        .into_par_iter()
+        .map(|_| HamerlyPoint::new())
+        .collect();
 
     // Main loop: find nearest centroids and recalculate means until convergence
     loop {
